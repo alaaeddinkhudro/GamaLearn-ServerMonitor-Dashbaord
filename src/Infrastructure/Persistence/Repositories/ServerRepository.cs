@@ -15,22 +15,82 @@ namespace Infrastructure.Persistence.Repositories
 
         public async Task<IReadOnlyList<Server>> GetAllAsync(CancellationToken ct)
         {
-            // This assumes scaffolded entity is _db.Servers with properties:
-            // ServerId, Name, Ipaddress, Status, Description, CreatedAt
             var list = await _db.Servers
                 .AsNoTracking()
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync(ct);
 
-            return list.Select(x => new Server
-            {
-                Id = x.ServerId,
-                Name = x.Name,
-                IPAddress = x.IPAddress, 
-                Status = x.Status,
-                Description = x.Description,
-                CreatedAt = x.CreatedAt
-            }).ToList();
+            return list.Select(Map).ToList();
         }
+
+        public async Task<Server?> GetByIdAsync(int id, CancellationToken ct)
+        {
+            var s = await _db.Servers.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ServerId == id, ct);
+
+            return s is null ? null : Map(s);
+        }
+
+        public async Task<int> CreateAsync(
+            string name,
+            string? ipAddress,
+            string status,
+            string? description,
+            CancellationToken ct)
+        {
+            var entity = new Models.Server
+            {
+                Name = name,
+                IPAddress = ipAddress,
+                Status = status,
+                Description = description,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Servers.Add(entity);
+            await _db.SaveChangesAsync(ct);
+
+            return entity.ServerId;
+        }
+
+        public async Task<bool> UpdateAsync(
+            int id,
+            string name,
+            string? ipAddress,
+            string status,
+            string? description,
+            CancellationToken ct)
+        {
+            var entity = await _db.Servers.FirstOrDefaultAsync(x => x.ServerId == id, ct);
+            if (entity is null) return false;
+
+            entity.Name = name;
+            entity.IPAddress = ipAddress; 
+            entity.Status = status;
+            entity.Description = description;
+
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+
+        public async Task<bool> DeleteAsync(int id, CancellationToken ct)
+        {
+            var entity = await _db.Servers.FirstOrDefaultAsync(x => x.ServerId == id, ct);
+            if (entity is null) return false;
+
+            _db.Servers.Remove(entity);
+            await _db.SaveChangesAsync(ct);
+            return true;
+        }
+
+        private static Server Map(Models.Server x) => new()
+        {
+            Id = x.ServerId,
+            Name = x.Name,
+            IPAddress = x.IPAddress, 
+            Status = x.Status,
+            Description = x.Description,
+            CreatedAt = x.CreatedAt
+        };
     }
 }
