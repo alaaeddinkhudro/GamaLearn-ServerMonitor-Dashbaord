@@ -1,10 +1,12 @@
 ﻿using Application.Servers.Features.ServersCrud;
 using Application.Servers.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebAPI.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/servers")]
     public sealed class ServersController : ControllerBase
@@ -25,6 +27,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create([FromBody] CreateServerRequest req, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(req.Name))
@@ -35,6 +38,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateServerRequest req, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(req.Name) || string.IsNullOrWhiteSpace(req.Status))
@@ -45,6 +49,7 @@ namespace WebAPI.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete([FromRoute] int id, CancellationToken ct)
         {
             var deleted = await _service.DeleteAsync(id, ct);
