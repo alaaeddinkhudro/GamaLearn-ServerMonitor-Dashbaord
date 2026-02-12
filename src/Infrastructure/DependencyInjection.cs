@@ -1,4 +1,8 @@
-﻿using Infrastructure.Persistence;
+﻿using Application.Interfaces;
+using Infrastructure.Persistence;
+using Infrastructure.Persistence.Repositories;
+using Infrastructure.Persistence.Seed;
+using Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +18,12 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection")));
+
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IJwtTokenService, JwtTokenService>();
+        services.AddScoped<DbSeeder>();
+        services.AddScoped<IServerRepository, ServerRepository>();
+
 
         return services;
     }
