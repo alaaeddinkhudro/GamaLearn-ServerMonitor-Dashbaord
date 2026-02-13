@@ -1,5 +1,8 @@
 using Application;
+using Hangfire;
+using Hangfire.SqlServer;
 using Infrastructure;
+using Infrastructure.BackgroundJobs;
 using Infrastructure.Persistence.Seed;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -12,6 +15,26 @@ builder.Services.AddControllers();
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+//hangfire
+builder.Services.AddHangfire(config =>
+{
+    config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+          .UseSimpleAssemblyNameTypeSerializer()
+          .UseRecommendedSerializerSettings()
+          .UseSqlServerStorage(
+              builder.Configuration.GetConnectionString("HangfireConnection"),
+              new SqlServerStorageOptions
+              {
+                  CommandBatchMaxTimeout = TimeSpan.FromMinutes(5),
+                  SlidingInvisibilityTimeout = TimeSpan.FromMinutes(5),
+                  QueuePollInterval = TimeSpan.FromSeconds(5),
+                  UseRecommendedIsolationLevel = true,
+                  DisableGlobalLocks = true
+              });
+});
+
+builder.Services.AddHangfireServer();
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -82,6 +105,17 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
+
+
+
+app.UseHangfireDashboard("/hangfire");
+
+// Schedule recurring job
+RecurringJob.AddOrUpdate<MetricsSimulationJob>(
+    "simulate-metrics",
+    job => job.RunAsync(CancellationToken.None),
+    "*/4 * * * *" // every 1 minute (cron)
+);
 
 app.UseHttpsRedirection();
 

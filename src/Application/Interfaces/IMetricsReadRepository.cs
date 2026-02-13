@@ -1,5 +1,4 @@
-﻿using Application.Common.Models;
-using Application.Metrics.Models;
+﻿using Application.Metrics.Models;
 using Application.Servers.Models;
 using Domain.Entities;
 using System;

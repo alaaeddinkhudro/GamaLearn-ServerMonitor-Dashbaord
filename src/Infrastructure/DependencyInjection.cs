@@ -25,6 +25,7 @@ public static class DependencyInjection
         services.AddScoped<DbSeeder>();
         services.AddScoped<IServerRepository, ServerRepository>();
         services.AddScoped<IMetricsReadRepository, MetricsReadRepository>();
+        services.AddScoped<MetricsSimulationJob>();
 
 
         return services;
