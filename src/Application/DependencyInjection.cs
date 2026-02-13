@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<Application.Users.Features.Login.LoginService>();
         services.AddSingleton<IPasswordHasher<string>, PasswordHasher<string>>();
         services.AddScoped<Application.Servers.Features.ServersCrud.ServersService>();
+        services.AddScoped<Application.Metrics.Features.MetricsRead.MetricsReadService>();
         return services;
     }
 }

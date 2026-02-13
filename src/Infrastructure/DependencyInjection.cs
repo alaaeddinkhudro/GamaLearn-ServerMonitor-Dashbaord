@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces;
+using Infrastructure.BackgroundJobs;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Repositories;
 using Infrastructure.Persistence.Seed;
@@ -23,6 +24,7 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<DbSeeder>();
         services.AddScoped<IServerRepository, ServerRepository>();
+        services.AddScoped<IMetricsReadRepository, MetricsReadRepository>();
 
 
         return services;
