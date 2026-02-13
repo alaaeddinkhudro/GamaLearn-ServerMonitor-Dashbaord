@@ -8,6 +8,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using WebAPI.Filters;
+using Hangfire.Dashboard;
+using Hangfire.Dashboard.BasicAuthorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,7 +111,26 @@ if (app.Environment.IsDevelopment())
 
 
 
-app.UseHangfireDashboard("/hangfire");
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = new[]
+    {
+        new BasicAuthAuthorizationFilter(new BasicAuthAuthorizationFilterOptions
+        {
+            RequireSsl = false, // true in prod
+            SslRedirect = false,
+            LoginCaseSensitive = true,
+            Users = new[]
+            {
+                new BasicAuthAuthorizationUser
+                {
+                    Login = builder.Configuration["Hangfire:User"],
+                    PasswordClear = builder.Configuration["Hangfire:Pass"]
+                }
+            }
+        })
+    }
+});
 
 // Schedule recurring job
 RecurringJob.AddOrUpdate<MetricsSimulationJob>(
