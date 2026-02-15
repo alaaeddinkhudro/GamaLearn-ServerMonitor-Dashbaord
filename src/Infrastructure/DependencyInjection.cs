@@ -24,9 +24,9 @@ public static class DependencyInjection
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<DbSeeder>();
         services.AddScoped<IServerRepository, ServerRepository>();
+        services.AddScoped<IServerExistsRepository, ServerRepository>();
         services.AddScoped<IMetricsReadRepository, MetricsReadRepository>();
         services.AddScoped<MetricsSimulationJob>();
-
 
         return services;
     }

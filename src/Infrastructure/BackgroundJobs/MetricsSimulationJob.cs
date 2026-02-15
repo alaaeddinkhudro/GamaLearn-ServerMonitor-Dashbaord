@@ -1,4 +1,6 @@
-﻿using Infrastructure.Persistence;
+﻿using Application.Interfaces;
+using Application.Metrics.Models;
+using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -9,11 +11,13 @@ namespace Infrastructure.BackgroundJobs
     public sealed class MetricsSimulationJob
     {
         private readonly ApplicationDbContext _db;
+        private readonly IMetricsPublisher _metricsPublisher;
         private static readonly Random _random = new();
 
-        public MetricsSimulationJob(ApplicationDbContext db)
+        public MetricsSimulationJob(ApplicationDbContext db, IMetricsPublisher metricsPublisher)
         {
             _db = db;
+            _metricsPublisher = metricsPublisher;
         }
 
         public async Task RunAsync(CancellationToken ct = default)
@@ -26,6 +30,8 @@ namespace Infrastructure.BackgroundJobs
             if (serverIds.Count == 0) return;
 
             var now = DateTime.UtcNow;
+
+            List<LiveMetricDto> liveMetrics = new();
 
             foreach (var serverId in serverIds)
             {
@@ -49,9 +55,24 @@ namespace Infrastructure.BackgroundJobs
                     Status = status,
                     Timestamp = now
                 });
+
+                liveMetrics.Add(new LiveMetricDto
+                {
+                    ServerId = serverId,
+                    CpuUsage = cpu,
+                    MemoryUsage = mem,
+                    DiskUsage = disk,
+                    ResponseTime = rt,
+                    Status = status,
+                    Timestamp = now
+                });
             }
 
             await _db.SaveChangesAsync(ct);
+            foreach (var metric in liveMetrics)
+            {
+                await _metricsPublisher.PublishMetricAsync(metric, ct);
+            }
         }
 
         private static double NextDouble(double min, double max)

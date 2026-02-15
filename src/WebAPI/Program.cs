@@ -1,5 +1,8 @@
 using Application;
+using Application.Interfaces;
 using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.Dashboard.BasicAuthorization;
 using Hangfire.SqlServer;
 using Infrastructure;
 using Infrastructure.BackgroundJobs;
@@ -8,8 +11,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using Hangfire.Dashboard;
-using Hangfire.Dashboard.BasicAuthorization;
+using WebAPI.Hubs;
+using WebAPI.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,9 +88,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
         };
+
+        // Allow SignalR clients to send the access token in the query string:
+        opt.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"].FirstOrDefault();
+                var path = context.HttpContext.Request.Path;
+                // If the request is for the hubs endpoints, read token from query string
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
+
+// SignalR services
+builder.Services.AddSignalR();
+builder.Services.AddScoped<IMetricsPublisher, MetricsPublisher>();
+
 
 var app = builder.Build();
 
@@ -142,6 +166,8 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHub<MetricsHub>("/hubs/metrics");
 
 app.MapControllers();
 app.Run();

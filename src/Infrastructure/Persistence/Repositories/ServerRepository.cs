@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Infrastructure.Persistence.Repositories
 {
-    public sealed class ServerRepository : IServerRepository
+    public sealed class ServerRepository : IServerRepository,  IServerExistsRepository
     {
         private readonly ApplicationDbContext _db;
 
@@ -81,6 +81,11 @@ namespace Infrastructure.Persistence.Repositories
             _db.Servers.Remove(entity);
             await _db.SaveChangesAsync(ct);
             return true;
+        }
+
+        public async Task<bool> ExistsAsync(int id, CancellationToken ct)
+        {
+            return await _db.Servers.AnyAsync(x => x.ServerId == id, ct);
         }
 
         private static Server Map(Models.Server x) => new()
