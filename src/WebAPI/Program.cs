@@ -110,7 +110,8 @@ builder.Services.AddAuthorization();
 
 // SignalR services
 builder.Services.AddSignalR();
-builder.Services.AddScoped<IMetricsPublisher, MetricsPublisher>();
+builder.Services.AddScoped<IMetricsPublisher, SignalRPublisher>();
+builder.Services.AddScoped<IAlertPublisher, SignalRPublisher>();
 
 
 var app = builder.Build();

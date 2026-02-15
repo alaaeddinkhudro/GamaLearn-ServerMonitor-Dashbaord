@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Enums;
 
 namespace Infrastructure.Persistence.Models;
 
@@ -22,4 +23,7 @@ public partial class Metric
     public DateTime Timestamp { get; set; }
 
     public virtual Server Server { get; set; } = null!;
+
+    public MetricStatus GetStatus() => Enum.Parse<MetricStatus>(Status);
+    public void SetStatus(MetricStatus status) => Status = status.ToString();
 }

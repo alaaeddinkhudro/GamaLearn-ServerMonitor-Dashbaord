@@ -6,8 +6,8 @@ using System.Text;
 
 namespace Application.Interfaces
 {
-    public interface IMetricsPublisher
+    public interface IAlertPublisher
     {
-        Task PublishMetricAsync(Metric metric, CancellationToken ct = default);
+        Task PublishAlertAsync(Alert Alert, CancellationToken ct = default);
     }
 }

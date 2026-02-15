@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Enums;
 
 namespace Infrastructure.Persistence.Models;
 
@@ -22,4 +23,10 @@ public partial class Alert
     public DateTime? ResolvedAt { get; set; }
 
     public virtual Server Server { get; set; } = null!;
+
+    public Domain.Enums.MetricType GetMetricType() => Enum.Parse<Domain.Enums.MetricType>(MetricType);
+    public void SetMetricType(Domain.Enums.MetricType metricType) => MetricType = metricType.ToString();
+
+    public AlertStatus GetStatus() => Enum.Parse<AlertStatus>(Status);
+    public void SetStatus(AlertStatus status) => Status = status.ToString();
 }

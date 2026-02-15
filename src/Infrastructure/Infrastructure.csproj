@@ -1,26 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.35" />
-    <PackageReference Include="Microsoft.AspNetCore.SignalR.Core" Version="1.2.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.1">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
-    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="10.0.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Application\Application.csproj" />
-    <ProjectReference Include="..\Domain\Domain.csproj" />
-  </ItemGroup>
-
-</Project>
+﻿USE [gamalearn-monitor-dashboard]; GO
+-- Roles table
+CREATE TABLE dbo.Roles ( RoleId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Roles PRIMARY KEY, Name NVARCHAR(50) NOT NULL CONSTRAINT UQ_Roles_Name UNIQUE, Description NVARCHAR(250) NULL ); GO
+-- Users table
+CREATE TABLE dbo.Users ( UserId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Users PRIMARY KEY, UserName NVARCHAR(50) NOT NULL, Email NVARCHAR(100) NOT NULL, PasswordHash NVARCHAR(500) NOT NULL, RoleId INT NOT NULL, RefreshToken NVARCHAR(500) NULL, RefreshTokenExpiry DATETIME NULL, CreatedAt DATETIME NOT NULL CONSTRAINT DF_Users_CreatedAt DEFAULT (GETDATE()), CONSTRAINT UQ_Users_UserName UNIQUE (UserName), CONSTRAINT UQ_Users_Email UNIQUE (Email), CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleId) REFERENCES dbo.Roles(RoleId) ON UPDATE NO ACTION ON DELETE NO ACTION ); GO
+-- Servers table
+CREATE TABLE dbo.Servers ( ServerId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Servers PRIMARY KEY, Name NVARCHAR(100) NOT NULL, IPAddress NVARCHAR(50) NULL, Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Servers_Status DEFAULT (N'Up'), Description NVARCHAR(250) NULL, CreatedAt DATETIME NOT NULL CONSTRAINT DF_Servers_CreatedAt DEFAULT (GETDATE()) ); GO
+-- Metrics table
+CREATE TABLE dbo.Metrics ( MetricId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Metrics PRIMARY KEY, ServerId INT NOT NULL, CpuUsage FLOAT NOT NULL, MemoryUsage FLOAT NOT NULL, DiskUsage FLOAT NOT NULL, ResponseTime FLOAT NOT NULL, Status NVARCHAR(20) NOT NULL, Timestamp DATETIME NOT NULL CONSTRAINT DF_Metrics_Timestamp DEFAULT (GETDATE()), CONSTRAINT FK_Metrics_Servers FOREIGN KEY (ServerId) REFERENCES dbo.Servers(ServerId) ON UPDATE NO ACTION ON DELETE NO ACTION ); GO CREATE INDEX IX_Metrics_ServerId_Timestamp ON dbo.Metrics(ServerId, Timestamp); GO
+-- Alerts table
+CREATE TABLE dbo.Alerts ( AlertId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Alerts PRIMARY KEY, ServerId INT NOT NULL, MetricType NVARCHAR(50) NOT NULL, MetricValue FLOAT NOT NULL, Threshold FLOAT NOT NULL, Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Alerts_Status DEFAULT (N'Triggered'), CreatedAt DATETIME NOT NULL CONSTRAINT DF_Alerts_CreatedAt DEFAULT (GETDATE()), ResolvedAt DATETIME NULL, CONSTRAINT FK_Alerts_Servers FOREIGN KEY (ServerId) REFERENCES dbo.Servers(ServerId) ON UPDATE NO ACTION ON DELETE NO ACTION ); GO CREATE INDEX IX_Alerts_ServerId_Status ON dbo.Alerts(ServerId, Status); GO
+-- Reports table
+CREATE TABLE dbo.Reports ( ReportId INT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Reports PRIMARY KEY, ServerId INT NOT NULL, StartTime DATETIME NOT NULL, EndTime DATETIME NOT NULL, Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Reports_Status DEFAULT (N'Pending'), FilePath NVARCHAR(500) NULL, CreatedAt DATETIME NOT NULL CONSTRAINT DF_Reports_CreatedAt DEFAULT (GETDATE()), CompletedAt DATETIME NULL, CONSTRAINT FK_Reports_Servers FOREIGN KEY (ServerId) REFERENCES dbo.Servers(ServerId) ON UPDATE NO ACTION ON DELETE NO ACTION ); GO CREATE INDEX IX_Reports_ServerId_CreatedAt ON dbo.Reports(ServerId, CreatedAt); GO

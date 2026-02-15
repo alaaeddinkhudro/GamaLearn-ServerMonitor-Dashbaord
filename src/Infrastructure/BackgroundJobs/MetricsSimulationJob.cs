@@ -1,5 +1,9 @@
-﻿using Application.Interfaces;
+﻿using Application.Alerts.Features.AlertValidator;
+using Application.Interfaces;
 using Application.Metrics.Models;
+using Application.Metrics.Services;
+using Domain.Entities;
+using Domain.Enums;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -11,13 +15,21 @@ namespace Infrastructure.BackgroundJobs
     public sealed class MetricsSimulationJob
     {
         private readonly ApplicationDbContext _db;
-        private readonly IMetricsPublisher _metricsPublisher;
+        private readonly AlertValidatorService _alertValidatorService;
+        private readonly IMetricRepository _metricRepository;
+        private readonly MetricsAlertService _metricsAlertService;
         private static readonly Random _random = new();
 
-        public MetricsSimulationJob(ApplicationDbContext db, IMetricsPublisher metricsPublisher)
+        public MetricsSimulationJob(ApplicationDbContext db,
+            AlertValidatorService alertValidatorService,
+            IMetricsPublisher metricsPublisher,
+            IMetricRepository metricRepository,
+            MetricsAlertService metricsAlertService)
         {
             _db = db;
-            _metricsPublisher = metricsPublisher;
+            _alertValidatorService = alertValidatorService;
+            _metricRepository = metricRepository;
+            _metricsAlertService = metricsAlertService;
         }
 
         public async Task RunAsync(CancellationToken ct = default)
@@ -31,7 +43,7 @@ namespace Infrastructure.BackgroundJobs
 
             var now = DateTime.UtcNow;
 
-            List<LiveMetricDto> liveMetrics = new();
+            List<Metric> liveMetrics = new();
 
             foreach (var serverId in serverIds)
             {
@@ -40,38 +52,33 @@ namespace Infrastructure.BackgroundJobs
                 var disk = NextDouble(20, 99);
                 var rt = NextDouble(10, 800); // ms
 
-                var status =
-                    cpu > 80 || mem > 90 || disk > 95 || rt > 600
-                        ? "Critical"
-                        : "Normal";
+                var isCritical = _alertValidatorService.IsTriggered(MetricType.CpuUsage, cpu, out _)
+                    || _alertValidatorService.IsTriggered(MetricType.MemoryUsage, mem, out _)
+                    || _alertValidatorService.IsTriggered(MetricType.DiskUsage, disk, out _)
+                    || _alertValidatorService.IsTriggered(MetricType.ResponseTime, rt, out _);
 
-                _db.Metrics.Add(new Persistence.Models.Metric
-                {
-                    ServerId = serverId,
-                    CpuUsage = cpu,
-                    MemoryUsage = mem,
-                    DiskUsage = disk,
-                    ResponseTime = rt,
-                    Status = status,
-                    Timestamp = now
-                });
+                var status = isCritical ? MetricStatus.Critical : MetricStatus.Normal;
 
-                liveMetrics.Add(new LiveMetricDto
-                {
-                    ServerId = serverId,
-                    CpuUsage = cpu,
-                    MemoryUsage = mem,
-                    DiskUsage = disk,
-                    ResponseTime = rt,
-                    Status = status,
-                    Timestamp = now
-                });
-            }
+                await _metricRepository.CreateAsync(
+                    serverId,
+                    cpu,
+                    mem,
+                    disk,
+                    rt,
+                    status,
+                    now,
+                    ct);
 
-            await _db.SaveChangesAsync(ct);
-            foreach (var metric in liveMetrics)
-            {
-                await _metricsPublisher.PublishMetricAsync(metric, ct);
+                await _metricsAlertService.EvaluateAndCreateAlertsAsync(
+                    serverId: serverId,
+                    cpu: cpu,
+                    memory: mem,
+                    disk: disk,
+                    responseTime: rt,
+                    timestampUtc: now,
+                    ct: CancellationToken.None);
+
+               
             }
         }
 

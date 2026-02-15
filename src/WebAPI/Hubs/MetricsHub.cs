@@ -30,6 +30,14 @@ namespace WebAPI.Hubs
         public Task Unsubscribe(int serverId)
             => Groups.RemoveFromGroupAsync(Context.ConnectionId, GroupName(serverId));
 
+        public async Task AlertSubscribe()
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, "alerts");
+        }
+
+        public Task AlertUnsubscribe()
+            => Groups.RemoveFromGroupAsync(Context.ConnectionId, "alerts");
+
         public override Task OnDisconnectedAsync(Exception? exception)
         {
             // Groups are automatically cleaned up on disconnect

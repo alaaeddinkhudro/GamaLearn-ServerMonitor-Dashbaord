@@ -26,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IServerRepository, ServerRepository>();
         services.AddScoped<IServerExistsRepository, ServerRepository>();
         services.AddScoped<IMetricsReadRepository, MetricsReadRepository>();
+        services.AddScoped<IMetricRepository, MetricRepository>();
+        services.AddScoped<IAlertRepository, AlertRepository>();
         services.AddScoped<MetricsSimulationJob>();
 
         return services;

@@ -3,6 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Microsoft.AspNetCore.Identity;
+using Application.Alerts.Features.AlertValidator;
+using Domain.Entities;
+using Domain.Enums;
 
 
 namespace Infrastructure.Persistence.Seed
@@ -10,11 +13,13 @@ namespace Infrastructure.Persistence.Seed
     public sealed class DbSeeder
     {
         private readonly ApplicationDbContext _db;
+        private readonly AlertValidatorService _alertValidatorService;
         private readonly IPasswordHasher<string> _hasher;
 
-        public DbSeeder(ApplicationDbContext db, IPasswordHasher<string> hasher)
+        public DbSeeder(ApplicationDbContext db, AlertValidatorService alertValidatorService, IPasswordHasher<string> hasher)
         {
             _db = db;
+            _alertValidatorService = alertValidatorService;
             _hasher = hasher;
         }
 
@@ -126,9 +131,12 @@ namespace Infrastructure.Persistence.Seed
                     var disk = random.NextDouble() * 100;
                     var responseTime = random.NextDouble() * 500;
 
-                    var status = cpu > 80 || memory > 90 || disk > 95 || responseTime > 600
-                        ? "Critical"
-                        : "Normal";
+                    var isCritical = _alertValidatorService.IsTriggered(MetricType.CpuUsage, cpu, out _)
+                        || _alertValidatorService.IsTriggered(MetricType.MemoryUsage, memory, out _)
+                        || _alertValidatorService.IsTriggered(MetricType.DiskUsage, disk, out _)
+                        || _alertValidatorService.IsTriggered(MetricType.ResponseTime, responseTime, out _);
+
+                    var status = isCritical ? MetricStatus.Critical : MetricStatus.Normal;
 
                     metrics.Add(new Models.Metric
                     {
@@ -137,7 +145,7 @@ namespace Infrastructure.Persistence.Seed
                         MemoryUsage = Math.Round(memory, 2),
                         DiskUsage = Math.Round(disk, 2),
                         ResponseTime = Math.Round(responseTime, 2),
-                        Status = status,
+                        Status = status.ToString(),
                         Timestamp = timestamp
                     });
                 }
